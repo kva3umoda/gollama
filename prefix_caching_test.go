@@ -5,7 +5,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	llama "github.com/godeps/gollama"
+	llama "github.com/kva3umoda/gollama"
 )
 
 var _ = Describe("Prefix Caching", Label("prefix-caching"), func() {

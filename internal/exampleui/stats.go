@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"strings"
 
-	llama "github.com/godeps/gollama"
+	llama "github.com/kva3umoda/gollama"
 )
 
 // DisplayModelStats renders model statistics with rainbow gradient colours and smart wrapping.

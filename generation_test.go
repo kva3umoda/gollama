@@ -6,7 +6,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/godeps/gollama"
+	"github.com/kva3umoda/gollama"
 )
 
 // Generation Core Test Suite

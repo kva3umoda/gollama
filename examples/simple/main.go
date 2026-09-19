@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"os"
 
-	llama "github.com/godeps/gollama"
+	llama "github.com/kva3umoda/gollama"
 )
 
 func main() {

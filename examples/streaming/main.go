@@ -33,7 +33,7 @@ import (
 	"strings"
 	"time"
 
-	llama "github.com/godeps/gollama"
+	llama "github.com/kva3umoda/gollama"
 )
 
 var (

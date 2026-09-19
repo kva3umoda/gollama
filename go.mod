@@ -1,4 +1,4 @@
-module github.com/godeps/gollama
+module github.com/kva3umoda/gollama
 
 go 1.25
 

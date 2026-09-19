@@ -26,8 +26,8 @@ import (
 	"runtime"
 	"time"
 
-	llama "github.com/godeps/gollama"
-	"github.com/godeps/gollama/internal/exampleui"
+	llama "github.com/kva3umoda/gollama"
+	"github.com/kva3umoda/gollama/internal/exampleui"
 )
 
 var (
