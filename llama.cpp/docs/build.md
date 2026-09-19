@@ -13,6 +13,23 @@ cd llama.cpp
 
 The following sections describe how to build with different backends and options.
 
+* [CPU Build](#cpu-build)
+* [BLAS Build](#blas-build)
+* [Metal Build](#metal-build)
+* [SYCL](#sycl)
+* [CUDA](#cuda)
+* [MUSA](#musa)
+* [HIP](#hip)
+* [Vulkan](#vulkan)
+* [CANN](#cann)
+* [ZenDNN](#zendnn)
+* [Arm® KleidiAI™](#arm-kleidiai)
+* [OpenCL](#opencl)
+* [Android](#android-1)
+* [OpenVINO](#openvino)
+* [Hexagon](#hexagon)
+* [Notes about GPU-accelerated backends](#notes-about-gpu-accelerated-backends)
+
 ## CPU Build
 
 Build llama.cpp using `CMake`:
@@ -54,21 +71,27 @@ cmake --build build --config Release
     - Tab Workload: Desktop-development with C++
     - Tab Components (select quickly via search): C++-_CMake_ Tools for Windows, _Git_ for Windows, C++-_Clang_ Compiler for Windows, MS-Build Support for LLVM-Toolset (clang)
     - Please remember to always use a Developer Command Prompt / PowerShell for VS2022 for git, build, test
-    - For Windows on ARM (arm64, WoA) build with:
-    ```bash
-    cmake --preset arm64-windows-llvm-release -D GGML_OPENMP=OFF
-    cmake --build build-arm64-windows-llvm-release
-    ```
-    For building with ninja generator and clang compiler as default:
-      -set path:set LIB=C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64;C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.41.34120\lib\x64\uwp;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\ucrt\x64
+    - For Windows on ARM (arm64, WoA), build with:
       ```bash
-      cmake --preset x64-windows-llvm-release
-      cmake --build build-x64-windows-llvm-release
+      cmake --preset arm64-windows-llvm-release -D GGML_OPENMP_FETCH=ON
+      cmake --build build-arm64-windows-llvm-release
       ```
-- Curl usage is enabled by default and can be turned off with `-DLLAMA_CURL=OFF`. Otherwise you need to install development libraries for libcurl.
-  - **Debian / Ubuntu:** `sudo apt-get install libcurl4-openssl-dev`  # (or `libcurl4-gnutls-dev` if you prefer GnuTLS)
-  - **Fedora / RHEL / Rocky / Alma:** `sudo dnf install libcurl-devel`
-  - **Arch / Manjaro:** `sudo pacman -S curl`  # includes libcurl headers
+      - Use `ARM64 Native Tools Command Prompt for VS 2022` if you are building on an ARM64 machine.
+      - `GGML_OPENMP_FETCH` downloads the official LLVM OpenMP runtime and requires Clang, 7-Zip and network access during configuration. CMake selects the runtime from the target architecture, so this also works when cross-compiling for WoA from x64. The extracted header, import library, DLL and OpenMP license are placed under `build/_deps`. The build copies `libomp.dll` and `LICENSE-LLVM-OpenMP` to the runtime output directory and installs them together. Omit the option to use CMake's normal OpenMP detection, or pass `-D GGML_OPENMP=OFF` to disable OpenMP.
+    - For building with ninja generator and clang compiler as default:
+      - Set path:
+        ```
+        set LIB=C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64;C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.41.34120\lib\x64\uwp;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\ucrt\x64
+        ```
+      - Run:
+        ```bash
+        cmake --preset x64-windows-llvm-release
+        cmake --build build-x64-windows-llvm-release
+        ```
+- If you want HTTPS/TLS features, you may install OpenSSL development libraries. If not installed, the project will build and run without SSL support.
+  - **Debian / Ubuntu:** `sudo apt-get install libssl-dev`
+  - **Fedora / RHEL / Rocky / Alma:** `sudo dnf install openssl-devel`
+  - **Arch / Manjaro:** `sudo pacman -S openssl`
 
 ## BLAS Build
 
@@ -108,7 +131,7 @@ Building through oneAPI compilers will make avx_vnni instruction set available f
 - Using oneAPI docker image:
   If you do not want to source the environment vars and install oneAPI manually, you can also build the code using intel docker container: [oneAPI-basekit](https://hub.docker.com/r/intel/oneapi-basekit). Then, you can use the commands given above.
 
-Check [Optimizing and Running LLaMA2 on Intel® CPU](https://www.intel.com/content/www/us/en/content-details/791610/optimizing-and-running-llama2-on-intel-cpu.html) for more information.
+Check [Optimizing and Running LLaMA2 on Intel® CPU](https://builders.intel.com/solutionslibrary/optimizing-and-running-llama2-on-intel-cpu) for more information.
 
 ### Other BLAS libraries
 
@@ -144,7 +167,7 @@ We also have a [guide](./backend/CUDA-FEDORA.md) for setting up CUDA toolkit in 
 - ***Necessary*** for users of [Atomic Desktops for Fedora](https://fedoraproject.org/atomic-desktops/); such as: [Silverblue](https://fedoraproject.org/atomic-desktops/silverblue/) and [Kinoite](https://fedoraproject.org/atomic-desktops/kinoite/).
   - (there are no supported CUDA packages for these systems)
 - ***Necessary*** for users that have a host that is not a: [Supported Nvidia CUDA Release Platform](https://developer.nvidia.com/cuda-downloads).
-  - (for example, you may have [Fedora 42 Beta](https://fedoramagazine.org/announcing-fedora-linux-42-beta/) as your your host operating system)
+  - (for example, you may have [Fedora 42 Beta](https://fedoramagazine.org/announcing-fedora-linux-42-beta/) as your host operating system)
 - ***Convenient*** For those running [Fedora Workstation](https://fedoraproject.org/workstation/) or [Fedora KDE Plasma Desktop](https://fedoraproject.org/spins/kde), and want to keep their host system clean.
 - *Optionally* toolbox packages are available: [Arch Linux](https://archlinux.org/), [Red Hat Enterprise Linux >= 8.5](https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux), or [Ubuntu](https://ubuntu.com/download)
 
@@ -248,9 +271,26 @@ You may set the [cuda environmental variables](https://docs.nvidia.com/cuda/cuda
 CUDA_VISIBLE_DEVICES="-0" ./build/bin/llama-server --model /srv/models/llama.gguf
 ```
 
+#### CUDA_SCALE_LAUNCH_QUEUES
+
+The environment variable [`CUDA_SCALE_LAUNCH_QUEUES`](https://docs.nvidia.com/cuda/cuda-programming-guide/05-appendices/environment-variables.html#cuda-scale-launch-queues) controls the size of CUDA's command buffer, which determines how many GPU operations can be queued before the CPU must wait for the GPU to catch up. A larger buffer reduces CPU-side stalls and allows more work to be queued on a GPU.
+
+Consider setting `CUDA_SCALE_LAUNCH_QUEUES=4x`, which increases the CUDA command buffer to 4 times its default size. This optimization is particularly beneficial for **Multi-GPU setups with pipeline parallelism**, where it significantly improves prompt processing throughput by allowing more operations to be enqueued across GPUs.
+
+#### GGML_CUDA_CUBLAS_COMPUTE_TYPE
+
+Override default, speed-optimized compute types for cuBLAS matrix multiplications.
+Legal values: `auto`, `f16`, `fp16`, `bf16`, `f32`, `fp32`.
+
 ### Unified Memory
 
 The environment variable `GGML_CUDA_ENABLE_UNIFIED_MEMORY=1` can be used to enable unified memory in Linux. This allows swapping to system RAM instead of crashing when the GPU VRAM is exhausted. In Windows this setting is available in the NVIDIA control panel as `System Memory Fallback`.
+
+### Peer Access
+
+The environment variable `GGML_CUDA_P2P` can be set to enable peer-to-peer access between multiple GPUs, allowing them to transfer data directly rather than to go through system memory.
+Requires driver support (usually restricted to workstation/datacenter GPUs).
+May cause crashes or corrupted outputs for some motherboards and BIOS settings (e.g. IOMMU).
 
 ### Performance Tuning
 
@@ -259,9 +299,9 @@ The following compilation options are also available to tweak performance:
 | Option                        | Legal values           | Default | Description                                                                                                                                                                                                                                                                                                                                                                      |
 |-------------------------------|------------------------|---------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | GGML_CUDA_FORCE_MMQ           | Boolean                | false   | Force the use of custom matrix multiplication kernels for quantized models instead of FP16 cuBLAS even if there is no int8 tensor core implementation available (affects V100, CDNA and RDNA3+). MMQ kernels are enabled by default on GPUs with int8 tensor core support. With MMQ force enabled, speed for large batch sizes will be worse but VRAM consumption will be lower. |
-| GGML_CUDA_FORCE_CUBLAS        | Boolean                | false   | Force the use of FP16 cuBLAS instead of custom matrix multiplication kernels for quantized models. There may be issues with numerical overflows (except for CDNA and RDNA4) and memory use will be higher. Prompt processing may become faster on recent datacenter GPUs (the custom kernels were tuned primarily for RTX 3000/4000).                                            |
-| GGML_CUDA_PEER_MAX_BATCH_SIZE | Positive integer       | 128     | Maximum batch size for which to enable peer access between multiple GPUs. Peer access requires either Linux or NVLink. When using NVLink enabling peer access for larger batch sizes is potentially beneficial.                                                                                                                                                                  |
-| GGML_CUDA_FA_ALL_QUANTS       | Boolean                | false   | Compile support for all KV cache quantization type (combinations) for the FlashAttention CUDA kernels. More fine-grained control over KV cache size but compilation takes much longer.                                                                                                                                                                                           |
+| GGML_CUDA_FORCE_CUBLAS        | Boolean                | false   | Force the use of FP16 cuBLAS instead of custom matrix multiplication kernels for quantized models. There may be issues with numerical overflows (except for V100, CDNA and RDNA4 which use FP32 compute type by default) and memory use will be higher. Prompt processing may become faster on recent datacenter GPUs (the custom kernels were tuned primarily for RTX 3000/4000).   |
+| GGML_CUDA_FA_QUANTS           | `all` or `type_K-type_V` list | q4_0-q4_0;q8_0-q8_0;f16-f16;bf16-bf16 | Select which K/V type combinations to compile the FlashAttention CUDA kernels for. `all` compiles every combination, but compilation takes much longer. Otherwise a `;`-separated list of `type_K-type_V` pairs; f16-f16 is always compiled. Combinations that were not compiled fall back to f16-f16 kernel with a warning. Legal types: f16, bf16, q4_0, q4_1, q5_0, q5_1, q8_0. |
+| GGML_CUDA_FA_ALL_QUANTS       | Boolean                | false   | Deprecated alias for `GGML_CUDA_FA_QUANTS=all`.                                                                                                                                                                                                                                                                                                                               |
 
 ## MUSA
 
@@ -328,12 +368,6 @@ You can download it from your Linux distro's package manager or from here: [ROCm
 
   Note: `GPU_TARGETS` is optional, omitting it will build the code for all GPUs in the current system.
 
-  To enhance flash attention performance on RDNA3+ or CDNA architectures, you can utilize the rocWMMA library by enabling the `-DGGML_HIP_ROCWMMA_FATTN=ON` option. This requires rocWMMA headers to be installed on the build system.
-
-  The rocWMMA library is included by default when installing the ROCm SDK using the `rocm` meta package provided by AMD. Alternatively, if you are not using the meta package, you can install the library using the `rocwmma-dev` or `rocwmma-devel` package, depending on your system's package manager.
-
-  As an alternative, you can manually install the library by cloning it from the official [GitHub repository](https://github.com/ROCm/rocWMMA), checkout the corresponding version tag (e.g. `rocm-6.2.4`) and set `-DCMAKE_CXX_FLAGS="-I<path/to/rocwmma>/library/include/"` in CMake. This also works under Windows despite not officially supported by AMD.
-
   Note that if you get the following error:
   ```
   clang: error: cannot find ROCm device library; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
@@ -360,7 +394,7 @@ You can download it from your Linux distro's package manager or from here: [ROCm
 
 
 The environment variable [`HIP_VISIBLE_DEVICES`](https://rocm.docs.amd.com/en/latest/understand/gpu_isolation.html#hip-visible-devices) can be used to specify which GPU(s) will be used.
-If your GPU is not officially supported you can use the environment variable [`HSA_OVERRIDE_GFX_VERSION`] set to a similar GPU, for example 10.3.0 on RDNA2 (e.g. gfx1030, gfx1031, or gfx1035) or 11.0.0 on RDNA3.
+If your GPU is not officially supported you can use the environment variable [`HSA_OVERRIDE_GFX_VERSION`] set to a similar GPU, for example 10.3.0 on RDNA2 (e.g. gfx1030, gfx1031, or gfx1035) or 11.0.0 on RDNA3. Note that [`HSA_OVERRIDE_GFX_VERSION`] is [not supported on Windows](https://github.com/ROCm/ROCm/issues/2654)
 
 ### Unified Memory
 
@@ -427,7 +461,8 @@ pacman -S git \
     mingw-w64-ucrt-x86_64-gcc \
     mingw-w64-ucrt-x86_64-cmake \
     mingw-w64-ucrt-x86_64-vulkan-devel \
-    mingw-w64-ucrt-x86_64-shaderc
+    mingw-w64-ucrt-x86_64-shaderc \
+    mingw-w64-ucrt-x86_64-spirv-headers
 ```
 
 Switch into the `llama.cpp` directory and build using CMake.
@@ -461,8 +496,10 @@ First, follow the official LunarG instructions for the installation and setup of
 
 On Debian / Ubuntu, you can install the required dependencies using:
 ```sh
-sudo apt-get install libvulkan-dev glslc
+sudo apt-get install libvulkan-dev glslc spirv-headers
 ```
+
+SPIRV-Headers (`spirv/unified1/spirv.hpp`) are required for the Vulkan backend and are **not** always pulled in by the Vulkan loader dev package alone. Other distros use names such as `spirv-headers` (Ubuntu / Debian / Arch), or `spirv-headers-devel` (Fedora / openSUSE). On Windows, the LunarG Vulkan SDK’s `Include` directory already contains these headers.
 
 #### Common steps
 
@@ -485,6 +522,37 @@ Finally, after finishing your build, you should be able to do something like thi
 
 # You should see in the output, ggml_vulkan detected your GPU. For example:
 # ggml_vulkan: Using Intel(R) Graphics (ADL GT2) | uma: 1 | fp16: 1 | warp size: 32
+```
+
+### For Mac users:
+
+Generally, follow LunarG's [Getting Started with the MacOS Vulkan SDK](https://vulkan.lunarg.com/doc/sdk/latest/mac/getting_started.html) guide for installation and setup of the Vulkan SDK. There are two options of Vulkan drivers on macOS, both of which implement translation layers to map Vulkan to Metal. They can be hot-swapped by setting the `VK_ICD_FILENAMES` environment variable to point to the respective ICD JSON file.
+
+Check the box for "KosmicKrisp" during the LunarG Vulkan SDK installation.
+
+Set environment variable for the LunarG Vulkan SDK after installation (and optionally add to your shell profile for persistence):
+```bash
+source /path/to/vulkan-sdk/setup-env.sh
+```
+
+#### Using MoltenVK
+
+MoltenVK is the default Vulkan driver installed with the LunarG Vulkan SDK on macOS, so you can use the above environment variable settings as is.
+
+#### Using KosmicKrisp
+
+Override the environment variable for KosmicKrisp:
+```bash
+export VK_ICD_FILENAMES=$VULKAN_SDK/share/vulkan/icd.d/libkosmickrisp_icd.json
+export VK_DRIVER_FILES=$VULKAN_SDK/share/vulkan/icd.d/libkosmickrisp_icd.json
+```
+
+#### Build
+
+This is the only step different from [above](#common-steps) instructions.
+```bash
+cmake -B build -DGGML_VULKAN=1 -DGGML_METAL=OFF
+cmake --build build --config Release
 ```
 
 ## CANN
@@ -547,24 +615,100 @@ You can test with:
 For detailed information about hardware support, setup instructions, and performance optimization, refer to [llama.cpp for ZenDNN](./backend/ZenDNN.md).
 
 ## Arm® KleidiAI™
-KleidiAI is a library of optimized microkernels for AI workloads, specifically designed for Arm CPUs. These microkernels enhance performance and can be enabled for use by the CPU backend.
+KleidiAI provides optimized Arm CPU microkernels used by the ggml CPU backend. Enabling it at build time makes those kernels available; it does not force every operation to use KleidiAI. At runtime, llama.cpp selects the best compatible CPU kernel from the detected CPU features, tensor type, operation shape, and active backend priority.
 
-To enable KleidiAI, go to the llama.cpp directory and build using CMake
+Supported targets:
+
+| Platform | Supported ABI / architecture | Notes |
+| --- | --- | --- |
+| Linux | AArch64 / arm64 | Runtime CPU feature detection is automatic. |
+| Android | `arm64-v8a` | Use the Android NDK command below for a portable build. |
+| Apple | arm64 | Runtime CPU feature detection is automatic. Non-streaming SVE vector length is treated as unavailable. |
+| Windows | arm64 | Runtime CPU feature detection is automatic. SMCU count is treated as unknown until a detection path is verified. |
+
+`GGML_CPU_KLEIDIAI=ON` is valid only for AArch64/arm64 builds. Do not enable it for x86, 32-bit Arm, or Android ABIs other than `arm64-v8a`.
+
+### Native AArch64/arm64 build
+
+From the llama.cpp source directory:
+
 ```bash
-cmake -B build -DGGML_CPU_KLEIDIAI=ON
+cmake -S . -B build -DGGML_CPU_KLEIDIAI=ON
 cmake --build build --config Release
 ```
-You can verify that KleidiAI is being used by running
+
+### Android arm64-v8a NDK build
+
+Set `ANDROID_NDK` to the Android NDK root, then run the following from the llama.cpp source directory. This command configures a portable Android `arm64-v8a` build with KleidiAI enabled and avoids Android dependencies that are not part of the NDK stable native API set.
+
+```bash
+cmake -S . -B build-android \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK/build/cmake/android.toolchain.cmake" \
+  -DANDROID_ABI=arm64-v8a \
+  -DANDROID_PLATFORM=android-28 \
+  -DGGML_CPU_KLEIDIAI=ON \
+  -DGGML_NATIVE=OFF \
+  -DGGML_OPENMP=OFF \
+  -DGGML_LLAMAFILE=OFF \
+  -DLLAMA_OPENSSL=OFF
+cmake --build build-android --config Release --parallel
+cmake --install build-android --prefix {install-dir} --config Release
+```
+
+Important Android options:
+
+- `GGML_CPU_KLEIDIAI=ON` enables KleidiAI for Android `arm64-v8a`.
+- `GGML_NATIVE=OFF` is required for cross-compilation because the build host CPU is not the Android target CPU.
+- `GGML_OPENMP=OFF` avoids adding an OpenMP runtime dependency to this NDK command-line build.
+- `GGML_LLAMAFILE=OFF` avoids the llamafile backend, which is not supported on Android.
+- `LLAMA_OPENSSL=OFF` avoids depending on OpenSSL, which is not part of the Android NDK stable native API set.
+
+The Android Studio project under `examples/llama.android` enables KleidiAI automatically for `arm64-v8a`. For Android command-line CMake builds on `arm64-v8a`, pass `-DGGML_CPU_KLEIDIAI=ON` explicitly.
+
+Global -march flags such as `-march=armv8.7a` flag are not required for a portable Android `arm64-v8a` build. Global `-march` flags raise the baseline instruction set for generic code. No manual architecture-specific source selection is required; llama.cpp selects compatible KleidiAI kernels at runtime. The KleidiAI libraries internal CMake handles the -march flags for each particular kernel.
+
+### Verifying the build
+
+Run an installed or in-tree binary:
+
 ```bash
 ./build/bin/llama-cli -m PATH_TO_MODEL -p "What is a car?"
 ```
-If KleidiAI is enabled, the ouput will contain a line similar to:
+
+If KleidiAI is enabled, the output contains a line similar to:
+
 ```
 load_tensors: CPU_KLEIDIAI model buffer size =  3474.00 MiB
 ```
-KleidiAI's microkernels implement optimized tensor operations using Arm CPU features such as dotprod, int8mm and SME. llama.cpp selects the most efficient kernel based on runtime CPU feature detection. However, on platforms that support SME, you must manually enable SME microkernels by setting the environment variable `GGML_KLEIDIAI_SME=1`.
 
-Depending on your build target, other higher priority backends may be enabled by default. To ensure the CPU backend is used, you must disable the higher priority backends either at compile time, e.g. -DGGML_METAL=OFF, or during run-time using the command line option `--device none`.
+This confirms that the model has tensors allocated through the KleidiAI CPU buffer. It does not prove that every operation, or any specific SME-family operation, used a KleidiAI microkernel. Runtime CPU features, tensor type, operation shape, and backend priority still control dispatch.
+
+Depending on the build target, another backend may have higher priority than the CPU backend. To force CPU execution for a run, disable higher priority backends at build time, for example `-DGGML_METAL=OFF`, or use a runtime device option such as `--device none` where supported.
+
+### Runtime dispatch
+
+KleidiAI microkernels use Arm CPU features such as dotprod, i8mm, SVE, and SME/SME2. Build-time configuration makes the kernels available. Runtime dispatch selects a compatible kernel for the detected CPU and operation. Older or lower-feature CPUs fall back automatically to compatible kernels.
+
+KleidiAI accelerates selected `GGML_OP_MUL_MAT` paths for F32 and common quantized formats. Exact coverage depends on the bundled KleidiAI version and the llama.cpp runtime selector, so unsupported tensor types, unsupported operation shapes, or higher priority backends may bypass KleidiAI even when the CPU supports the required Arm feature. This is also why a model may not use SME-family kernels on SME-capable hardware.
+
+The current llama.cpp KleidiAI SVE selector only enables SVE kernels when the runtime SVE vector length is known to be QK8_0 bytes, currently 32 bytes. Linux and Android query this at runtime. Apple reports SVE capability separately from userspace non-streaming SVE availability, so llama.cpp treats the SVE vector length as unknown there. Windows exposes SVE feature presence but not the runtime SVE vector length used by this selector, so that value is also treated as unknown. Windows arm64 also treats SMCU count as unknown until a detection mechanism is verified.
+
+The set of available SME-family kernels depends on the bundled KleidiAI version and the detected CPU capabilities. Production configuration does not require any KleidiAI runtime environment variables.
+
+### Diagnostics and debug overrides
+
+KleidiAI runtime environment variables are diagnostics/debug overrides, not production configuration. Leave them unset for normal use.
+
+`GGML_KLEIDIAI_SME` controls SME-family kernel selection and overrides the maximum number of threads assigned to selected quantized SME-family kernels:
+
+- Not set: use automatic runtime detection.
+- `0`: disable SME-family kernels.
+- `<n> > 0`: enable compatible SME-family kernels and allow up to `<n>` threads for quantized SME-family kernels.
+
+On Windows arm64, use `GGML_KLEIDIAI_SME=<n>` as the temporary diagnostics/debug override for SME thread-cap calibration until automatic SMCU count detection is verified.
+
+If the CPU does not support the required SME-family capability for a bundled kernel, that kernel is disabled regardless of the environment variable.
 
 ## OpenCL
 
@@ -660,9 +804,9 @@ ninja
 
 To read documentation for how to build on Android, [click here](./android.md)
 
-## WebGPU [In Progress]
+## WebGPU
 
-The WebGPU backend relies on [Dawn](https://dawn.googlesource.com/dawn). Follow the instructions [here](https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/quickstart-cmake.md) to install Dawn locally so that llama.cpp can find it using CMake. The currrent implementation is up-to-date with Dawn commit `bed1a61`.
+The WebGPU backend relies on [Dawn](https://dawn.googlesource.com/dawn). Follow the instructions [here](https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/quickstart-cmake.md) to install Dawn locally so that llama.cpp can find it using CMake. The current implementation is up-to-date with Dawn commit `94c3c9c`.
 
 In the llama.cpp directory, build with CMake:
 
@@ -675,12 +819,23 @@ cmake --build build --config Release
 
 WebGPU allows cross-platform access to the GPU from supported browsers. We utilize [Emscripten](https://emscripten.org/) to compile ggml's WebGPU backend to WebAssembly. Emscripten does not officially support WebGPU bindings yet, but Dawn currently maintains its own WebGPU bindings called emdawnwebgpu.
 
-Follow the instructions [here](https://dawn.googlesource.com/dawn/+/refs/heads/main/src/emdawnwebgpu/) to download or build the emdawnwebgpu package (Note that it might be safer to build the emdawbwebgpu package locally, so that it stays in sync with the version of Dawn you have installed above). When building using CMake, the path to the emdawnwebgpu port file needs to be set with the flag `EMDAWNWEBGPU_DIR`.
+Follow the instructions [here](https://dawn.googlesource.com/dawn/+/refs/heads/main/src/emdawnwebgpu/) to download or build the emdawnwebgpu package (Note that it might be safer to build the emdawnwebgpu package locally, so that it stays in sync with the version of Dawn you have installed above). When building using CMake, the path to the emdawnwebgpu port file needs to be set with the flag `EMDAWNWEBGPU_DIR`.
 
 ## IBM Z & LinuxONE
 
 To read documentation for how to build on IBM Z & LinuxONE, [click here](./build-s390x.md)
 
+## OpenVINO
+
+[OpenVINO](https://docs.openvino.ai/) is an open-source toolkit for optimizing and deploying high-performance AI inference, specifically designed for Intel hardware (CPUs, GPUs, and NPUs).
+
+For build instructions and usage examples, refer to [OPENVINO.md](backend/OPENVINO.md).
+
+### Hexagon
+
+Check [README.md](./backend/snapdragon/README.md) for target specific build and run info.
+
+---
 ## Notes about GPU-accelerated backends
 
 The GPU may still be used to accelerate some parts of the computation even when using the `-ngl 0` option. You can fully disable GPU acceleration by using `--device none`.

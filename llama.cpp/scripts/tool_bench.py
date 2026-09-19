@@ -7,7 +7,7 @@
 
     Simple usage example:
 
-        cmake -B build -DLLAMA_CURL=1 && cmake --build build --config Release -j -t llama-server
+        cmake -B build && cmake --build build --config Release -j -t llama-server
 
         export LLAMA_SERVER_BIN_PATH=$PWD/build/bin/llama-server
         export LLAMA_CACHE=${LLAMA_CACHE:-$HOME/Library/Caches/llama.cpp}
@@ -52,8 +52,8 @@ import typer
 
 sys.path.insert(0, Path(__file__).parent.parent.as_posix())
 if True:
-    from tools.server.tests.utils import ServerProcess
-    from tools.server.tests.unit.test_tool_call import do_test_calc_result, do_test_hello_world, do_test_weather
+    from tools.server.tests.utils import ServerProcess  # ty: ignore[unresolved-import]
+    from tools.server.tests.unit.test_tool_call import do_test_calc_result, do_test_hello_world, do_test_weather  # ty: ignore[unresolved-import]
 
 
 @contextmanager
